@@ -1,0 +1,32 @@
+/* Styles propres aux écrans : connexion, popovers, tableau de bord, pages provisoires.
+   Les jetons @nom viennent de tokens.py. */
+
+/* ---------- Connexion ---------- */
+QWidget#LoginView { background: @bg_app; }
+QFrame#LoginBrand { background: @navy_900; }
+QLabel#LoginBrandMark { background: @white; color: @navy_900; border-radius: @radius_banner; font-size: @fs_card_title; font-weight: 700; }
+QLabel#LoginBrandName { color: @white; font-size: @fs_display; font-weight: 700; }
+QLabel#LoginBrandTagline { color: @navy_100; font-size: @fs_card_title; }
+QLabel#LoginFeature { color: @navy_100; font-size: @fs_body; }
+QLabel#LoginBrandFooter { color: @navy_100; font-size: @fs_small; }
+QWidget#LoginPanel { background: @bg_app; }
+QLabel#LoginTitle { font-size: @fs_title; font-weight: 700; color: @navy_900; }
+QLabel#LoginFootnote { font-size: @fs_caption; color: @gray_500; }
+
+/* ---------- Popovers ---------- */
+QFrame#Popover { background: @bg_surface; border: 1px solid @border; border-radius: @radius_card; }
+QFrame[role="popover-item"] { background: transparent; border-radius: @radius_control; }
+QFrame[role="popover-item"]:hover { background: @navy_50; }
+QLabel[role="popover-header"] { font-size: @fs_card_title; font-weight: 600; color: @navy_900; }
+QLabel[role="popover-title"] { font-size: @fs_cell; font-weight: 600; color: @gray_900; }
+QLabel[role="popover-text"] { font-size: @fs_caption; color: @gray_500; }
+QFrame[role="popover-item"][tone="danger"] QLabel[role="popover-title"] { color: @danger_600; }
+
+/* ---------- Grilles et listes (tableau de bord) ---------- */
+QLabel[role="grid-head"] { font-size: @fs_caption; font-weight: 600; color: @gray_500; }
+QLabel[role="grid-cell"] { font-size: @fs_cell; color: @gray_900; }
+QLabel[role="grid-total"] { font-size: @fs_cell; font-weight: 700; color: @navy_900; }
+QLabel[role="row-title"] { font-size: @fs_cell; font-weight: 600; color: @gray_900; }
+
+/* ---------- Pages provisoires ---------- */
+QLabel#PlaceholderIcon { background: @navy_50; border-radius: 24px; }

@@ -1,0 +1,69 @@
+"""Adaptateur des amendes : connecte FinesPort aux services."""
+from __future__ import annotations
+
+import sqlite3
+
+from app.database.connection import get_connection
+from app.repositories import exercices, amendes
+from app.ui.ports_fines import FinesData, FineRecord
+
+
+class FinesAdapter:
+    """Implémente FinesPort en utilisant les services."""
+
+    def __init__(self) -> None:
+        pass
+
+    def load(self, exercise_label: str) -> FinesData:
+        conn = get_connection()
+        try:
+            exercice = conn.execute(
+                "SELECT id, libelle, statut FROM exercices WHERE libelle = ?",
+                (exercise_label,)
+            ).fetchone()
+            
+            if not exercice:
+                conn.close()
+                return self._empty_data(exercise_label)
+            
+            exercice_id = exercice["id"]
+            is_open = exercice["statut"] == "ouvert"
+            
+            # Récupérer les amendes
+            fines = amendes.list_for_exercice(conn, exercice_id)
+            
+            # Convertir en FineRecord
+            records = []
+            for f in fines:
+                membre = conn.execute(
+                    "SELECT numero_carnet, nom FROM membres WHERE id = ?",
+                    (f["membre_id"],)
+                ).fetchone()
+                
+                records.append(FineRecord(
+                    id=f["id"],
+                    member_carnet=membre["numero_carnet"] if membre else "—",
+                    member_name=membre["nom"] if membre else f["nom"],
+                    label=f["libelle"],
+                    date=f["date_amende"],
+                    amount_expected=f["montant_attendu"],
+                    amount_collected=f["montant_collecte"],
+                ))
+            
+            conn.close()
+            return FinesData(
+                exercise_label=exercise_label,
+                is_open=is_open,
+                records=tuple(records)
+            )
+        except Exception as e:
+            conn.close()
+            print(f"Erreur fines adapter: {e}")
+            return self._empty_data(exercise_label)
+
+    def _empty_data(self, exercise_label: str) -> FinesData:
+        return FinesData(
+            exercise_label=exercise_label,
+            is_open=True,
+            records=()
+        )
