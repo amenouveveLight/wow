@@ -6,7 +6,7 @@ from datetime import date
 from PySide6.QtWidgets import QWidget
 
 from app.ui.widgets.dialog import FormDialog
-from app.ui.widgets.form import TextInput, SelectInput
+from app.ui.widgets.form import TextInput, SelectInput, DateInput
 
 
 class AddMemberDialog(FormDialog):

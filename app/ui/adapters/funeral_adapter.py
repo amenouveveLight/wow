@@ -18,21 +18,19 @@ class FuneralAdapter:
     def load(self, exercise_label: str) -> FuneralData:
         conn = get_connection()
         try:
-            exercice = conn.execute(
-                "SELECT id, libelle, statut FROM exercices WHERE libelle = ?",
-                (exercise_label,)
-            ).fetchone()
-            
+            from app.repositories import exercices
+            exercice = exercices.get_by_libelle(conn, exercise_label)
+
             if not exercice:
                 conn.close()
                 return self._empty_data(exercise_label)
-            
-            exercice_id = exercice["id"]
-            is_open = exercice["statut"] == "ouvert"
-            
+
+            exercice_id = exercice.id
+            is_open = exercice.statut == "ouvert"
+
             # Récupérer les collectes de décès
             collectes = list_collectes(conn, exercice_id)
-            
+
             # Convertir en DeathRecord
             records = []
             for c in collectes:
@@ -48,7 +46,7 @@ class FuneralAdapter:
                     total_expected=c.total_attendu,
                     exempted=c.exempter_endeuille == 1,
                 ))
-            
+
             conn.close()
             return FuneralData(
                 exercise_label=exercise_label,
@@ -58,6 +56,8 @@ class FuneralAdapter:
         except Exception as e:
             conn.close()
             print(f"Erreur funeral adapter: {e}")
+            import traceback
+            traceback.print_exc()
             return self._empty_data(exercise_label)
 
     def _empty_data(self, exercise_label: str) -> FuneralData:

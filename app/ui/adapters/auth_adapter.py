@@ -25,7 +25,7 @@ class AuthAdapter:
                 LoginStatus.OK,
                 UserInfo(
                     current_user.identifiant,
-                    current_user.full_name,
+                    current_user.nom_complet,
                     current_user.role
                 )
             )

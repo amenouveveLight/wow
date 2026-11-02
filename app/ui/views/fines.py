@@ -194,11 +194,11 @@ class FinesView(QWidget):
     def _fill_pager(self, model: FinesViewModel) -> None:
         _clear_layout(self._pager)
         precedent = AppButton("Précédent", Variant.SECONDARY)
-        precedent.setEnabled(model.rows and len(model.rows) > 0)
+        precedent.setEnabled(bool(model.rows and len(model.rows) > 0))
         precedent.clicked.connect(lambda: self.page_requested.emit(1))
         self._pager.addWidget(precedent)
         self._pager.addWidget(make_label("Pagination à implémenter", "caption"))
         suivant = AppButton("Suivant", Variant.SECONDARY)
-        suivant.setEnabled(model.rows and len(model.rows) > 0)
+        suivant.setEnabled(bool(model.rows and len(model.rows) > 0))
         suivant.clicked.connect(lambda: self.page_requested.emit(2))
         self._pager.addWidget(suivant)

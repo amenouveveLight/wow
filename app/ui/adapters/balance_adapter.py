@@ -6,7 +6,7 @@ from datetime import date
 
 from app.database.connection import get_connection
 from app.repositories import exercices
-from app.services.bilan_service import consulter
+from app.services.bilan_service import calculer
 from app.ui.ports_balance import BalanceData
 
 
@@ -23,35 +23,36 @@ class BalanceAdapter:
                 "SELECT id, libelle, statut, date_debut, date_fin FROM exercices WHERE libelle = ?",
                 (exercise_label,)
             ).fetchone()
-            
+
             if not exercice:
                 conn.close()
                 return self._empty_data(exercise_label)
-            
+
             exercice_id = exercice["id"]
             is_open = exercice["statut"] == "ouvert"
             period_start = date.fromisoformat(exercice["date_debut"])
             period_end = date.fromisoformat(exercice["date_fin"])
-            
-            # Calculer le bilan
-            bilan = consulter(conn, exercice_id)
-            
+
+            # Calculer le bilan (utiliser calculer au lieu de consulter)
+            bilan = calculer(conn, exercice_id)
+
             conn.close()
             return BalanceData(
                 exercise_label=exercise_label,
                 is_open=is_open,
                 period_start=period_start.strftime("%d/%m/%Y"),
                 period_end=period_end.strftime("%d/%m/%Y"),
-                total_revenue=bilan.recettes,
+                total_revenue=bilan.total_entrees,
                 total_expenses=bilan.depenses,
                 balance=bilan.solde,
-                carried_forward=bilan.report_precedent,
-                closing_balance=bilan.solde_cloture,
-                is_positive=bilan.solde_cloture >= 0,
+                carried_forward=bilan.solde_ouverture,
+                closing_balance=bilan.solde_cumule,
             )
         except Exception as e:
             conn.close()
             print(f"Erreur balance adapter: {e}")
+            import traceback
+            traceback.print_exc()
             return self._empty_data(exercise_label)
 
     def _empty_data(self, exercise_label: str) -> BalanceData:
@@ -65,5 +66,4 @@ class BalanceAdapter:
             balance=0,
             carried_forward=0,
             closing_balance=0,
-            is_positive=True,
         )

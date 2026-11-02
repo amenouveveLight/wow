@@ -6,7 +6,7 @@ from datetime import date
 
 from app.database.connection import get_connection
 from app.repositories import exercices, membres, deces, cotisations_paralleles, amendes, depenses
-from app.services.bilan_service import consulter
+from app.services.bilan_service import calculer
 from app.services.versement_service import releve_mensuel
 from app.services.deces_service import releve_funeraire
 from app.services.tableau_parallele import list_resumes
@@ -29,40 +29,41 @@ class DashboardAdapter:
     def load(self, exercise_label: str) -> DashboardData:
         conn = get_connection()
         try:
-            exercice = exercices.get_by_label(conn, exercise_label)
+            exercice = exercices.get_by_libelle(conn, exercise_label)
             if not exercice:
                 conn.close()
                 return self._empty_data(exercise_label)
             
-            is_open = exercice["statut"] == "ouvert"
-            period_start = date.fromisoformat(exercice["date_debut"])
-            period_end = date.fromisoformat(exercice["date_fin"])
-            
+            is_open = exercice.statut == "ouvert"
+            period_start = exercice.date_debut
+            period_end = exercice.date_fin
+
             # Statistiques membres
-            active_count = membres.count_by_status(conn, exercice["id"], "actif")
-            deceased_count = membres.count_by_status(conn, exercice["id"], "decede")
-            
+            active_count = membres.count(conn, statut="actif")
+            deceased_count = membres.count(conn, statut="decede")
+
             # Calculer les rubriques
-            rubriques = self._calculate_rubriques(conn, exercice["id"])
-            
+            rubriques = self._calculate_rubriques(conn, exercice.id)
+
             # Dépenses totales
-            depense_totals = depense_resume(conn, exercice["id"])
+            depense_totals = depense_resume(conn, exercice.id)
             expenses = depense_totals.depense
-            
-            # Bilan
-            bilan = consulter(conn, exercice["id"])
-            
+
+            # Bilan - utiliser calculer au lieu de consulter (pas besoin de session)
+            from app.services.bilan_service import calculer
+            bilan = calculer(conn, exercice.id)
+
             # Détails des dettes
-            debtors = self._get_debtors(conn, exercice["id"])
-            
+            debtors = self._get_debtors(conn, exercice.id)
+
             # Alertes
             alerts = self._get_alerts(exercice, bilan)
-            
+
             # Données mensuelles pour le graphique
-            monthly = self._get_monthly_figures(conn, exercice["id"], period_start, period_end)
-            
+            monthly = self._get_monthly_figures(conn, exercice.id, period_start, period_end)
+
             # Dernières opérations
-            operations = self._get_recent_operations(conn, exercice["id"])
+            operations = self._get_recent_operations(conn, exercice.id)
             
             conn.close()
             
@@ -179,32 +180,31 @@ class DashboardAdapter:
             debtors = []
             for m in tableau:
                 if m.dette > 0:
-                    membre = membres.get_by_id(conn, m.membre_id)
+                    membre = membres.get(conn, m.membre_id)
                     if membre:
                         debtors.append(DebtorInfo(
-                            membre["nom"],
-                            f"Carnet {membre['numero_carnet']}",
+                            membre.nom,
+                            f"Carnet {membre.numero_carnet}",
                             m.dette
                         ))
             return tuple(debtors)
         except Exception:
             return ()
 
-    def _get_alerts(self, exercice: dict, bilan: Bilan) -> tuple[AlertInfo, ...]:
+    def _get_alerts(self, exercice, bilan) -> tuple[AlertInfo, ...]:
         """Génère les alertes basées sur l'état de l'exercice."""
         alerts = []
-        
-        if exercice["statut"] == "ouvert":
+
+        if exercice.statut == "ouvert":
             # Vérifier si l'exercice est proche de la fin
             from datetime import datetime
-            end_date = date.fromisoformat(exercice["date_fin"])
-            days_left = (end_date - date.today()).days
+            days_left = (exercice.date_fin - date.today()).days
             if days_left <= 30:
                 alerts.append(AlertInfo(
                     "warning",
-                    f"L'exercice {exercice['libelle']} se termine dans {days_left} jours."
+                    f"L'exercice {exercice.libelle} se termine dans {days_left} jours."
                 ))
-        
+
         if bilan.dettes_total > 0:
             alerts.append(AlertInfo(
                 "danger",

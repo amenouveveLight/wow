@@ -46,52 +46,51 @@ def ensure_first_admin() -> bool:
 
 def ensure_current_exercise() -> bool:
     """Crée l'exercice courant s'il n'existe pas.
-    
+
     Returns:
         True si un exercice a été créé, False si un exercice existait déjà.
     """
+    from app.security.session import Session, CurrentUser
+
     conn = get_connection()
     try:
         # Vérifier si un exercice existe déjà
         existing = conn.execute(
             "SELECT id FROM exercices ORDER BY id DESC LIMIT 1"
         ).fetchone()
-        
+
         if existing:
             conn.close()
             return False
-        
+
         # Créer l'exercice 2025-2026 (septembre à août)
         today = date.today()
         year = today.year
         if today.month < 9:
             year -= 1
-        
+
+        # Créer une session temporaire pour l'initialisation
+        session = Session()
+        session.login(CurrentUser(1, "admin", "Administrateur", Role.ADMINISTRATEUR))
+
         with transaction(conn):
-            exercice_id = create_exercice(
+            exercice = create_exercice(
                 conn,
-                f"{year}-{year + 1}",
-                date(year, 9, 1),
-                date(year + 1, 8, 31)
+                session,
+                year,
+                5000,  # tarif_homme
+                3000   # tarif_femme
             )
-            
+
             # Définir les tarifs funéraires par défaut
-            set_funeral_tarifs(conn, exercice_id, 5000, 3000)
-            
-            # Définir les tarifs mensuels par défaut
-            conn.execute(
-                "INSERT INTO tarifs_mensuels (exercice_id, sexe, montant) VALUES (?, 'M', 5000)",
-                (exercice_id,)
-            )
-            conn.execute(
-                "INSERT INTO tarifs_mensuels (exercice_id, sexe, montant) VALUES (?, 'F', 3000)",
-                (exercice_id,)
-            )
-        
+            set_funeral_tarifs(conn, session, exercice.id, 10000, 8000)
+
         conn.close()
         return True
     except Exception as e:
         print(f"Erreur création exercice: {e}")
+        import traceback
+        traceback.print_exc()
         conn.close()
         return False
 

@@ -18,38 +18,36 @@ class ExpensesAdapter:
     def load(self, exercise_label: str) -> ExpensesData:
         conn = get_connection()
         try:
-            exercice = conn.execute(
-                "SELECT id, libelle, statut FROM exercices WHERE libelle = ?",
-                (exercise_label,)
-            ).fetchone()
-            
+            from app.repositories import exercices
+            exercice = exercices.get_by_libelle(conn, exercise_label)
+
             if not exercice:
                 conn.close()
                 return self._empty_data(exercise_label)
-            
-            exercice_id = exercice["id"]
-            is_open = exercice["statut"] == "ouvert"
-            
+
+            exercice_id = exercice.id
+            is_open = exercice.statut == "ouvert"
+
             # Récupérer les dépenses
             expenses = depenses.list_for_exercice(conn, exercice_id)
-            
+
             # Convertir en ExpenseRecord
             records = []
             for e in expenses:
                 records.append(ExpenseRecord(
-                    id=e["id"],
-                    date=e["date_depense"],
-                    label=e["libelle"],
-                    beneficiary=e["beneficiaire"],
-                    amount_planned=e["montant_prevu"],
-                    amount_spent=e["montant_depense"],
+                    id=e.id,
+                    date=e.date_depense,
+                    label=e.libelle,
+                    beneficiary=e.beneficiaire,
+                    amount_planned=e.montant_prevu,
+                    amount_spent=e.montant_depense,
                 ))
-            
+
             # Totaux
             totals = resume(conn, exercice_id)
             total_planned = totals.prevu
             total_spent = totals.depense
-            
+
             conn.close()
             return ExpensesData(
                 exercise_label=exercise_label,
@@ -61,6 +59,8 @@ class ExpensesAdapter:
         except Exception as e:
             conn.close()
             print(f"Erreur expenses adapter: {e}")
+            import traceback
+            traceback.print_exc()
             return self._empty_data(exercise_label)
 
     def _empty_data(self, exercise_label: str) -> ExpensesData:

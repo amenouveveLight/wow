@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from typing import Optional
 
 from app.models.exercice import Exercice
 from app.models.versement import FUNERAIRE, MENSUELLE, PARALLELE
@@ -39,7 +40,7 @@ class BilanError(Exception):
 class LigneBilan:
     rubrique: str
     libelle: str
-    du: int | None          # None : pas de « dû » (reliquats)
+    du: Optional[int]          # None : pas de « dû » (reliquats)
     percu: int              # argent encaissé dans l'exercice
     dettes: int = 0         # tout ce que les membres doivent encore (exercice + dettes reportées)
     avances: int = 0        # excédents des membres (y compris avances reportées inutilisées)
@@ -47,19 +48,19 @@ class LigneBilan:
     avance_reportee: int = 0
 
     @property
-    def a_percevoir(self) -> int | None:
+    def a_percevoir(self) -> Optional[int]:
         """Dû de l'année + dette reportée."""
         return None if self.du is None else self.du + self.dette_reportee
 
     @property
-    def manque(self) -> int | None:
+    def manque(self) -> Optional[int]:
         """Dû + dette reportée − perçu − avance reportée (négatif si excédent : pour les calculs)."""
         if self.du is None:
             return None
         return self.du + self.dette_reportee - self.percu - self.avance_reportee
 
     @property
-    def situation(self) -> Situation | None:
+    def situation(self) -> Optional[Situation]:
         """Excédent (vert) ou dette (rouge) de la rubrique. None pour les reliquats."""
         manque = self.manque
         return None if manque is None else affichage.depuis_ecart(-manque)
